@@ -7,6 +7,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.schema.document import Document
 from get_embedding_function import get_embedding_function
 from langchain.vectorstores import FAISS
+from langchain_community.document_loaders import DirectoryLoader, TextLoader
 
 DATA_PATH = "../data"
 FAISS_PATH = "faiss_store"
@@ -30,6 +31,14 @@ def load_documents():
     document_loader = PyPDFDirectoryLoader(DATA_PATH)
     return document_loader.load()
 
+# def load_documents():
+#     loader = DirectoryLoader(
+#         path=DATA_PATH,
+#         glob="**/*.txt",
+#         loader_cls=TextLoader,
+#         show_progress=True
+#     )
+#     return loader.load()
 
 def split_documents(documents: list[Document]):
     text_splitter = RecursiveCharacterTextSplitter(
