@@ -6,3 +6,5 @@ backup
 chroma
 .env
 rag_env
+data/
+enused/
