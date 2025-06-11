@@ -1,3 +1,4 @@
+# query_data.py
 import argparse
 from langchain_community.vectorstores import FAISS
 from langchain.prompts import ChatPromptTemplate

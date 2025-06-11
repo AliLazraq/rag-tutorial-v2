@@ -1,17 +1,14 @@
 import argparse
 import os
 import shutil
-import pickle
-from langchain_community.document_loaders import PyPDFDirectoryLoader
+from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.schema.document import Document
 from get_embedding_function import get_embedding_function
-from langchain.vectorstores import FAISS
-from langchain_community.document_loaders import DirectoryLoader, TextLoader
+from langchain_community.vectorstores import FAISS
 
 DATA_PATH = "../data"
-FAISS_PATH = "faiss_store"
-
+FAISS_FOLDER = "faiss_store"
 
 def main():
     parser = argparse.ArgumentParser()
@@ -26,19 +23,15 @@ def main():
     chunks = split_documents(documents)
     add_to_faiss(chunks)
 
-
 def load_documents():
-    document_loader = PyPDFDirectoryLoader(DATA_PATH)
-    return document_loader.load()
-
-# def load_documents():
-#     loader = DirectoryLoader(
-#         path=DATA_PATH,
-#         glob="**/*.txt",
-#         loader_cls=TextLoader,
-#         show_progress=True
-#     )
-#     return loader.load()
+    loader = DirectoryLoader(
+        path=DATA_PATH,
+        glob="**/*.txt",
+        loader_cls=TextLoader,
+        loader_kwargs={"encoding": "utf-8"},
+        show_progress=True
+    )
+    return loader.load()
 
 def split_documents(documents: list[Document]):
     text_splitter = RecursiveCharacterTextSplitter(
@@ -49,14 +42,13 @@ def split_documents(documents: list[Document]):
     )
     return text_splitter.split_documents(documents)
 
-
 def calculate_chunk_ids(chunks: list[Document]):
     last_page_id = None
     current_chunk_index = 0
 
     for chunk in chunks:
-        source = chunk.metadata.get("source")
-        page = chunk.metadata.get("page")
+        source = chunk.metadata.get("source", "unknown")
+        page = chunk.metadata.get("page", 0)
         current_page_id = f"{source}:{page}"
 
         if current_page_id == last_page_id:
@@ -70,11 +62,6 @@ def calculate_chunk_ids(chunks: list[Document]):
 
     return chunks
 
-
-from langchain_community.vectorstores import FAISS
-
-FAISS_FOLDER = "faiss_store"  # a folder, not a file
-
 def add_to_faiss(chunks: list[Document]):
     embedding_function = get_embedding_function()
     chunks_with_ids = calculate_chunk_ids(chunks)
@@ -86,7 +73,7 @@ def add_to_faiss(chunks: list[Document]):
         existing_docs = db.similarity_search("", k=len(chunks_with_ids))
         existing_ids = set(doc.metadata.get("id") for doc in existing_docs if "id" in doc.metadata)
 
-        print(f"Number of existing documents in FAISS DB: {len(existing_ids)}")
+        print(f"📄 Number of existing documents in FAISS DB: {len(existing_ids)}")
 
         new_chunks = [chunk for chunk in chunks_with_ids if chunk.metadata["id"] not in existing_ids]
         if new_chunks:
@@ -100,7 +87,6 @@ def add_to_faiss(chunks: list[Document]):
         db = FAISS.from_documents(chunks_with_ids, embedding_function)
         db.save_local(FAISS_FOLDER)
         print("✅ FAISS DB created and saved to disk")
-
 
 def clear_database():
     if os.path.exists(FAISS_FOLDER):
